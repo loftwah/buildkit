@@ -1,7 +1,5 @@
 # BuildKit Mirror
 
-[![Mirror BuildKit Image](https://github.com/loftwah/buildkit/actions/workflows/mirror.yml/badge.svg)](https://github.com/loftwah/buildkit/actions/workflows/mirror.yml)
-
 This repository maintains a mirror of the official BuildKit image (`moby/buildkit:latest`) in the GitHub Container Registry. The mirror is automatically updated daily at midnight UTC and can also be triggered manually.
 
 ## Usage
