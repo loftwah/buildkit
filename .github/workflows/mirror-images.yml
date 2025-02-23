@@ -1,0 +1,74 @@
+name: Mirror Docker Images to GHCR
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Runs daily at midnight UTC
+  workflow_dispatch:
+    inputs:
+      image:
+        description: 'Optional: Sync a specific image (e.g., moby/buildkit:latest)'
+        required: false
+        default: ''
+
+env:
+  SINGLE_IMAGE: ${{ github.event.inputs.image }}  # Manual override for one image
+  IMAGES: |
+    moby/buildkit:latest ghcr.io/${{ github.repository }}/buildkit
+    ruby:latest ghcr.io/${{ github.repository }}/ruby
+    nginx:latest ghcr.io/${{ github.repository }}/nginx
+    node:latest ghcr.io/${{ github.repository }}/nodejs
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}  # Optional Slack webhook
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Mirror Single Image (If Provided)
+        if: env.SINGLE_IMAGE != ''
+        run: |
+          echo "Syncing single image: $SINGLE_IMAGE"
+          docker pull "$SINGLE_IMAGE" || { echo "Failed to pull $SINGLE_IMAGE"; exit 1; }
+          IMAGE_NAME=$(echo "$SINGLE_IMAGE" | awk -F':' '{print $1}')
+          TARGET="ghcr.io/${{ github.repository }}/$(basename "$IMAGE_NAME")"
+          docker tag "$SINGLE_IMAGE" "$TARGET"
+          docker push "$TARGET" || { echo "Failed to push $TARGET"; exit 1; }
+        shell: bash
+
+      - name: Mirror All Images (If No Override)
+        if: env.SINGLE_IMAGE == ''
+        run: |
+          echo "No single image specified. Syncing all predefined images."
+          while read -r SOURCE TARGET; do
+            echo "Processing $SOURCE -> $TARGET"
+            docker pull "$SOURCE" || { echo "Failed to pull $SOURCE"; continue; }
+            docker tag "$SOURCE" "$TARGET"
+            docker push "$TARGET" || { echo "Failed to push $TARGET"; continue; }
+          done <<< "$IMAGES"
+        shell: bash
+
+      - name: Notify on Success
+        if: success() && env.SLACK_WEBHOOK_URL != ''
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"✅ Docker image sync succeeded for ${{ github.repository }}! Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK_URL"
+        continue-on-error: true
+
+      - name: Notify on Failure
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"🚨 Docker image sync failed for ${{ github.repository }}! Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK_URL"
+        continue-on-error: true
