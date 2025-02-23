@@ -9,6 +9,7 @@ jobs:
     permissions:
       packages: write
       contents: read
+      id-token: write  # For better security with OIDC
     
     steps:
       - name: Checkout Repo
@@ -29,6 +30,17 @@ jobs:
 
       - name: Install jq for Tag Parsing
         run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Check Docker Hub Rate Limits
+        run: |
+          TOKEN=$(curl -s "https://auth.docker.io/token?service=registry.docker.io&scope=repository:ratelimitcheck/test:pull" | jq -r .token)
+          LIMITS=$(curl -s -H "Authorization: Bearer $TOKEN" https://registry-1.docker.io/v2/ratelimitcheck/test/manifests/latest 2>&1 | grep -i 'ratelimit')
+          echo "Current Docker Hub rate limits: $LIMITS"
+          if [[ $LIMITS == *"429 Too Many Requests"* ]]; then
+            echo "Rate limit exceeded, waiting..."
+            exit 1
+          fi
+        continue-on-error: true
 
       - name: Fetch and Mirror All Image Versions
         env:
