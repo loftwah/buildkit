@@ -81,16 +81,20 @@ jobs:
 
       - name: Notify on Success
         if: success() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
-            --data "{\"text\":\"✅ Docker image sync succeeded for ${{ github.repository }}! Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            --data "{\"text\":\"✅ Successfully mirrored images for ${{ github.repository }}! Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
             "$SLACK_WEBHOOK_URL"
         continue-on-error: true
 
       - name: Notify on Failure
         if: failure() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
-            --data "{\"text\":\"🚨 Docker image sync failed for ${{ github.repository }}! Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            --data "{\"text\":\"🚨 Image mirroring failed for ${{ github.repository }}! Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
             "$SLACK_WEBHOOK_URL"
         continue-on-error: true
