@@ -25,6 +25,7 @@ jobs:
     permissions:
       packages: write
       contents: read
+      id-token: write  # For better security with OIDC
     
     steps:
       - name: Login to Docker Hub
@@ -39,6 +40,9 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install jq for Rate Limit Check
+        run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Check Docker Hub Rate Limits
         run: |
@@ -57,7 +61,8 @@ jobs:
           echo "Syncing single image: $SINGLE_IMAGE"
           docker pull "$SINGLE_IMAGE" || { echo "Failed to pull $SINGLE_IMAGE"; exit 1; }
           IMAGE_NAME=$(echo "$SINGLE_IMAGE" | awk -F':' '{print $1}')
-          TARGET="ghcr.io/${{ github.repository }}/$(basename "$IMAGE_NAME")"
+          TAG=$(echo "$SINGLE_IMAGE" | awk -F':' '{print $2:-"latest"}')
+          TARGET="ghcr.io/${{ github.repository }}/$(basename "$IMAGE_NAME"):$TAG"
           docker tag "$SINGLE_IMAGE" "$TARGET"
           docker push "$TARGET" || { echo "Failed to push $TARGET"; exit 1; }
         shell: bash

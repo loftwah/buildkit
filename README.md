@@ -104,4 +104,19 @@ node -e 'console.log("Node.js is up and running");'
 ### Daily Mirror (`mirror-images.yml`)
 
 - **Runs**: Automatically every day at midnight UTC (12:00 AM universal time).
-- **Purpose**: Keeps `latest`
+- **Purpose**: Keeps `latest` tags up to date for all images.
+- **Manual Override**: Can sync a specific image version via workflow dispatch.
+
+### All Versions Mirror (`mirror-all-images.yml`)
+
+- **Runs**: Manually triggered only.
+- **Purpose**: Syncs latest version plus two prior stable versions for each image.
+- **Note**: Use this when you need specific version tags.
+
+## Contributing
+
+Feel free to open issues or PRs if you'd like to improve this mirror setup.
+
+## License
+
+MIT License - feel free to use this in your own projects.
