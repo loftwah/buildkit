@@ -1,0 +1,80 @@
+name: Mirror Latest Docker Images to GHCR
+
+on:
+  workflow_dispatch:  # Button only, no auto bullshit
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install jq for Tag Parsing
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Fetch and Mirror Latest Image Versions
+        env:
+          GHCR_PREFIX: ghcr.io/${{ github.repository }}
+        run: |
+          # Function to get latest + 2 prior stable tags from Docker Hub
+          get_tags() {
+            IMAGE=$1
+            REPO=$2
+            # Hit Docker Hub API, filter out RCs/betas, sort by semver, take top 3
+            curl -s "https://registry.hub.docker.com/v2/repositories/$REPO/$IMAGE/tags?page_size=50" | \
+            jq -r '.results[].name | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))' | \
+            sort -Vr | head -n 3
+          }
+
+          # Process each image
+          for image in "buildkit:moby/buildkit" "ruby:library/ruby" "nginx:library/nginx" "node:library/node"; do
+            IFS=':' read -r NAME REPO <<< "$image"
+            echo "Fetching tags for $NAME from $REPO..."
+            TAGS=$(get_tags "$NAME" "$REPO")
+            if [ -z "$TAGS" ]; then
+              echo "No valid tags found for $NAME, skipping."
+              continue
+            fi
+            echo "Found tags: $TAGS"
+            for TAG in $TAGS; do
+              SOURCE="$REPO/$NAME:$TAG"
+              TARGET="$GHCR_PREFIX/$NAME:$TAG"
+              echo "Mirroring $SOURCE -> $TARGET"
+              docker pull "$SOURCE" || { echo "Pull failed for $SOURCE, skipping"; continue; }
+              docker tag "$SOURCE" "$TARGET"
+              docker push "$TARGET" || { echo "Push failed for $TARGET, skipping"; continue; }
+            done
+          done
+        shell: bash
+
+      - name: Notify on Success
+        if: success() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"✅ Successfully mirrored latest images for ${{ github.repository }}! Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK_URL"
+        continue-on-error: true
+
+      - name: Notify on Failure
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"🚨 Image mirroring failed for ${{ github.repository }}! Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK_URL"
+        continue-on-error: true

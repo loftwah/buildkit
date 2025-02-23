@@ -1,19 +1,20 @@
 # Docker Image Mirror
 
-[![Mirror Docker Images](https://github.com/loftwah/buildkit/actions/workflows/mirror-images.yml/badge.svg)](https://github.com/loftwah/buildkit/actions/workflows/mirror-images.yml)
+This repository (`loftwah/buildkit`) mirrors Docker images to the GitHub Container Registry (GHCR) with precision and reliability, giving you fast access to key tools. Two workflows keep everything up to date:
 
-This repository (`loftwah/buildkit`) mirrors four Docker images to the GitHub Container Registry (GHCR). Here’s what gets copied:
+- **Daily Mirror**: Syncs `latest` tags every day for `buildkit`, `ruby`, `nginx`, and `node`.
+- **Latest + Older Mirror**: Manually fetches the latest versions plus two recent stable ones with a single click.
 
-- `moby/buildkit:latest` → `ghcr.io/loftwah/buildkit/buildkit`
-- `ruby:latest` → `ghcr.io/loftwah/buildkit/ruby`
-- `nginx:latest` → `ghcr.io/loftwah/buildkit/nginx`
-- `node:latest` → `ghcr.io/loftwah/buildkit/nodejs`
+Here’s what gets mirrored:
 
-It updates these every damn day at midnight UTC (12:00 AM, universal time). You can also run it manually whenever you want.
+- `moby/buildkit` → `ghcr.io/loftwah/buildkit/buildkit`
+- `ruby` → `ghcr.io/loftwah/buildkit/ruby`
+- `nginx` → `ghcr.io/loftwah/buildkit/nginx`
+- `node` → `ghcr.io/loftwah/buildkit/nodejs`
 
 ## Pulling the Images
 
-You need Docker installed (grab it from [docker.com](https://www.docker.com/) if you don’t have it). Open a terminal and use these commands to get the `latest` versions:
+You’ll need Docker installed (download it from [docker.com](https://www.docker.com/) if you don’t have it). Open a terminal and use these commands to pull the `latest` versions, which are always available after the daily run:
 
 ```bash
 docker pull ghcr.io/loftwah/buildkit/buildkit:latest  # BuildKit
@@ -24,32 +25,34 @@ docker pull ghcr.io/loftwah/buildkit/nodejs:latest    # Node.js
 
 ### Specific Versions
 
-The workflow only mirrors `latest` by default, but if upstream has tagged versions (like `ruby:3.2.2` or `node:20`), you can manually trigger those. Examples of what _could_ work if you sync it (see Manual Trigger below):
+- **Daily Workflow**: Automatically mirrors `latest` tags. For specific versions (e.g., `ruby:3.3.0`), use the manual trigger option.
+- **Latest + Older Workflow**: Pulls the latest version plus two prior stable ones when triggered. As of February 2025, you might see:
+  - **BuildKit**: `v0.12.5` (latest), `v0.12.0`, `v0.11.6`.
+  - **Ruby**: `3.3.0` (latest), `3.2.2`, `3.1.4`.
+  - **Nginx**: `1.25.3` (latest), `1.24.0`, `1.22.1`.
+  - **Node**: `20.11.0` (latest), `18.19.0`, `16.20.2`.
 
-- `ghcr.io/loftwah/buildkit/buildkit:v0.12.5`
-- `ghcr.io/loftwah/buildkit/ruby:3.2.2`
-- `ghcr.io/loftwah/buildkit/nginx:1.25.3`
-- `ghcr.io/loftwah/buildkit/nodejs:20`
-
-To pull a specific version, swap `latest` with the tag, but it’s only there if you’ve manually synced it first:
+To pull a specific version:
 
 ```bash
-docker pull ghcr.io/loftwah/buildkit/ruby:3.2.2
+docker pull ghcr.io/loftwah/buildkit/ruby:3.3.0
 ```
 
-## How to Use These Images
+If you get a “manifest unknown” error, it hasn’t been mirrored yet—run the appropriate workflow first.
 
-Here’s how to do shit with them after pulling:
+## Using the Images
+
+Here’s how to use them after pulling:
 
 ### BuildKit
 
-Builds Docker images fast. Run it:
+For building Docker images efficiently. Start it:
 
 ```bash
 docker run -d --name buildkitd --privileged ghcr.io/loftwah/buildkit/buildkit:latest
 ```
 
-Then build something:
+Then build a project:
 
 ```bash
 docker buildx create --use --name mybuilder --driver remote tcp://localhost:1234
@@ -58,115 +61,127 @@ docker buildx build -t myimage:latest .
 
 ### Ruby
 
-Run Ruby code. Start it:
+For running Ruby applications. Start it:
 
 ```bash
 docker run -it ghcr.io/loftwah/buildkit/ruby:latest bash
 ```
 
-Inside, type:
+Inside, run:
 
 ```bash
-ruby -e 'puts "Hell yeah, Ruby works!"'
+ruby -e 'puts "Ruby is ready to roll!"'
 ```
 
 ### Nginx
 
-Run a web server. Start it:
+For hosting a web server. Start it:
 
 ```bash
 docker run -d -p 80:80 ghcr.io/loftwah/buildkit/nginx:latest
 ```
 
-Open `http://localhost` in your browser—bam, Nginx.
+Open `http://localhost` in your browser to see Nginx in action.
 
 ### Node.js
 
-Run JavaScript. Start it:
+For JavaScript development. Start it:
 
 ```bash
 docker run -it ghcr.io/loftwah/buildkit/nodejs:latest bash
 ```
 
-Inside, type:
+Inside, run:
 
 ```bash
-node -e 'console.log("Node.js is alive");'
+node -e 'console.log("Node.js is up and running");'
 ```
 
-## Automatic Updates
+## Workflows
 
-A GitHub Actions workflow handles it:
+### Daily Mirror (`mirror-images.yml`)
 
-- Runs every day at midnight UTC.
-- You can trigger it manually too.
-- Sends Slack messages if you set it up (optional).
+- **Runs**: Automatically every day at midnight UTC (12:00 AM universal time).
+- **Purpose**: Keeps `latest` tags current for all four images.
+- **Manual Option**: Trigger it yourself for `latest` or a specific version.
 
-## Manual Trigger
+#### Manual Trigger
 
-To update shit yourself:
+1. Visit [https://github.com/loftwah/buildkit/actions](https://github.com/loftwah/buildkit/actions).
+2. Select “Mirror Docker Images.”
+3. Click “Run workflow.”
+4. **Optional**: Enter an image (e.g., `ruby:3.3.0`) to sync just that version. Leave blank for all `latest`.
+5. Keep the branch as `main`.
+6. Click “Run workflow” and wait a few minutes.
 
-1. Go to [https://github.com/loftwah/buildkit/actions](https://github.com/loftwah/buildkit/actions).
-2. Click “Mirror Docker Images” in the list.
-3. Hit “Run workflow” on the right.
-4. **Optional**: Type an image like `moby/buildkit:v0.12.5` or `ruby:3.2.2` to sync just that version. Leave blank for all `latest`.
-5. Leave the branch as `main`.
-6. Click the green “Run workflow” button. Wait a few minutes.
+### Latest + Older Mirror (`mirror-latest-images.yml`)
 
-## What Happens When It Runs
+- **Runs**: Only when you trigger it manually.
+- **Purpose**: Fetches the latest version plus two prior stable ones for all four images, directly from Docker Hub.
 
-The workflow:
+#### Manual Trigger
 
-1. Logs into GHCR with a secret token.
-2. If you gave it one image (e.g., `ruby:3.2.2`):
-   - Pulls it, tags it as `ghcr.io/loftwah/buildkit/ruby`, pushes it.
-   - Stops if it screws up.
-3. If you didn’t specify anything:
-   - Pulls all four `latest` images, tags them, pushes them.
-   - Skips any that screw up and keeps going.
-4. If Slack’s set up, it pings you.
+1. Visit [https://github.com/loftwah/buildkit/actions](https://github.com/loftwah/buildkit/actions).
+2. Select “Mirror Latest Docker Images.”
+3. Click “Run workflow.”
+4. Leave the input box empty—no need to type anything.
+5. Keep the branch as `main`.
+6. Click “Run workflow” and wait a few minutes.
 
-## Files in This Repo
+## What Happens If You Pull an Unmirrored Image
+
+If you try to pull an image that hasn’t been mirrored yet (e.g., `ghcr.io/loftwah/buildkit/ruby:3.3.0` before running the latest workflow):
+
+- Command: `docker pull ghcr.io/loftwah/buildkit/ruby:3.3.0`
+- Result: You’ll see “manifest unknown” or “pull access denied”—it’s not there yet.
+- **Solution**: Run the right workflow:
+  - For `latest`: Use “Mirror Docker Images” with no input.
+  - For specific or recent versions: Use “Mirror Docker Images” with the tag (e.g., `ruby:3.3.0`) or “Mirror Latest Docker Images” for the latest batch.
+
+Check available tags at [https://github.com/loftwah/buildkit/packages](https://github.com/loftwah/buildkit/packages)—click a package to see what’s been mirrored.
+
+## Files in This Repository
 
 ```
 .
 ├── .github
 │   └── workflows
-│       └── mirror-images.yml    # The workflow file
-└── README.md                    # This doc
+│       ├── mirror-images.yml        # Daily latest sync
+│       └── mirror-latest-images.yml # Latest + older versions sync
+└── README.md                        # This documentation
 ```
 
 ## Permissions
 
-The workflow needs:
+Both workflows require:
 
-- `packages: write` - To push images.
-- `contents: read` - To see the workflow file.
+- `packages: write` - To push images to GHCR.
+- `contents: read` - To access workflow files.
 
-## Slack Setup (Optional)
+## Slack Notifications (Optional)
 
-To get Slack alerts:
+To enable notifications:
 
-1. Make a Slack webhook (search “Slack webhook” online).
+1. Create a Slack webhook (search “Slack webhook setup” for instructions).
 2. Go to [https://github.com/loftwah/buildkit/settings/secrets/actions](https://github.com/loftwah/buildkit/settings/secrets/actions).
 3. Click “New repository secret.”
-4. Name it `SLACK_WEBHOOK_URL`, paste the webhook, hit “Add secret.”
-5. It’ll ping Slack with “✅ Done” or “🚨 Failed.”
+4. Name it `SLACK_WEBHOOK_URL`, paste the webhook URL, and click “Add secret.”
+5. You’ll get “✅ Done” or “🚨 Failed” messages in Slack.
 
-No webhook? It runs silent.
+If you don’t set it up, it runs silently—no interruptions.
 
-## Adding or Fixing Stuff
+## Contributing
 
-- **Issues**: Click “Issues” on GitHub, complain about what’s wrong.
-- **Pull Requests**: Edit files, submit changes if you know how.
+- **Issues**: Go to the “Issues” tab and report any problems or ideas.
+- **Pull Requests**: Submit changes via the “Pull requests” tab if you’ve got improvements.
 
-## Legal Stuff
+## Licensing
 
-This just mirrors images. BuildKit, Ruby, Nginx, and Node.js keep their own licenses.
+This repository only mirrors images. The original licenses for BuildKit, Ruby, Nginx, and Node.js apply to their respective images.
 
-## Check If It’s Working
+## Status Check
 
-Go to [https://github.com/loftwah/buildkit/actions](https://github.com/loftwah/buildkit/actions):
+Visit [https://github.com/loftwah/buildkit/actions](https://github.com/loftwah/buildkit/actions):
 
-- Green check = It worked.
-- Red X = Something’s busted, click it for logs.
+- Green check = Workflow succeeded.
+- Red X = Something failed; click it for detailed logs.
