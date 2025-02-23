@@ -38,26 +38,41 @@ jobs:
           echo "Starting mirror process..."
           echo "GHCR_PREFIX: $GHCR_PREFIX"
           
+          # Add this before the get_tags function
+          debug_curl() {
+            echo "Curl command failed. Response: $1"
+            echo "HTTP Status: $2"
+          }
+          
           get_tags() {
             local IMAGE=$1
             local REPO=$2
             echo "Fetching tags for ${REPO}/${IMAGE}..."
             
-            # Get Docker Hub API token
-            local TOKEN=$(curl -s -f \
-              -u "${DOCKERHUB_USERNAME}:${DOCKERHUB_TOKEN}" \
-              "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${REPO}/${IMAGE}:pull" | jq -r .token)
+            # Debug auth attempt
+            echo "Attempting to get auth token..."
             
-            if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-              echo "Failed to get auth token for ${REPO}/${IMAGE}"
+            local AUTH_RESPONSE=$(curl -s -f -w "%{http_code}" \
+              -H "Content-Type: application/json" \
+              -u "${DOCKERHUB_USERNAME}:${DOCKERHUB_TOKEN}" \
+              "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${REPO}/${IMAGE}:pull")
+            
+            local HTTP_STATUS=${AUTH_RESPONSE: -3}
+            local RESPONSE_BODY=${AUTH_RESPONSE:0:${#AUTH_RESPONSE}-3}
+            
+            if [ "$HTTP_STATUS" != "200" ]; then
+              debug_curl "$RESPONSE_BODY" "$HTTP_STATUS"
               return 1
             fi
             
-            # Get tags using v2 API
+            local TOKEN=$(echo "$RESPONSE_BODY" | jq -r .token)
+            
+            # Get tags using Docker Hub API v2
             local TAGS=$(curl -s -f -L \
+              -H "Accept: application/json" \
               -H "Authorization: Bearer $TOKEN" \
-              "https://hub.docker.com/v2/repositories/${REPO}/${IMAGE}/tags?page_size=100" | \
-              jq -r '.results[].name' | \
+              "https://registry.hub.docker.com/v2/${REPO}/${IMAGE}/tags/list" | \
+              jq -r '.tags[]' | \
               grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | \
               sed 's/^v//' | \
               sort -V -r | \
