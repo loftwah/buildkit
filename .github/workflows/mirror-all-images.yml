@@ -32,21 +32,34 @@ jobs:
           get_tags() {
             IMAGE=$1
             REPO=$2
-            # Fetch tags, filter to stable semver, sort descending, take top 3
-            curl -s "https://registry.hub.docker.com/v2/repositories/$REPO/$IMAGE/tags?page_size=50" | \
-            jq -r '.results[].name | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))' | \
-            sort -Vr | head -n 3
+            # Use v2 API with authentication to avoid rate limits
+            TOKEN=$(curl -s "https://auth.docker.io/token?service=registry.docker.io&scope=repository:$REPO/$IMAGE:pull" | jq -r .token)
+            curl -s -H "Authorization: Bearer $TOKEN" \
+              "https://registry.hub.docker.com/v2/$REPO/$IMAGE/tags/list" | \
+              jq -r '.tags[]' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | \
+              sort -Vr | head -n 3
           }
 
           # Process each image
           for image in "buildkit:moby/buildkit" "ruby:library/ruby" "nginx:library/nginx" "node:library/node"; do
             IFS=':' read -r NAME REPO <<< "$image"
             echo "Fetching tags for $NAME from $REPO..."
-            TAGS=$(get_tags "$NAME" "$REPO")
+            
+            # Add retry mechanism
+            for i in {1..3}; do
+              TAGS=$(get_tags "$NAME" "$REPO")
+              if [ ! -z "$TAGS" ]; then
+                break
+              fi
+              echo "Attempt $i failed, retrying..."
+              sleep 5
+            done
+
             if [ -z "$TAGS" ]; then
-              echo "No valid tags found for $NAME, skipping."
+              echo "No valid tags found for $NAME after 3 attempts, skipping."
               continue
             fi
+
             echo "Found tags: $TAGS"
             for TAG in $TAGS; do
               SOURCE="$REPO/$NAME:$TAG"
@@ -56,7 +69,8 @@ jobs:
               docker tag "$SOURCE" "$TARGET"
               docker push "$TARGET" || { echo "Push failed for $TARGET, skipping"; continue; }
             done
-            # Explicitly pull latest to ensure it's included
+
+            # Handle latest tag
             LATEST_SOURCE="$REPO/$NAME:latest"
             LATEST_TARGET="$GHCR_PREFIX/$NAME:latest"
             echo "Mirroring latest: $LATEST_SOURCE -> $LATEST_TARGET"

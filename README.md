@@ -5,7 +5,7 @@ This repository (`loftwah/buildkit`) mirrors Docker images to the GitHub Contain
 - **Daily Mirror**: Syncs `latest` tags every day for `buildkit`, `ruby`, `nginx`, and `node`, with an option to manually sync a specific version.
 - **All Versions Mirror**: Manually fetches the latest versions plus two recent stable ones for all four images with a single click.
 
-Here’s what gets mirrored:
+Here's what gets mirrored:
 
 - `moby/buildkit` → `ghcr.io/loftwah/buildkit/buildkit`
 - `ruby` → `ghcr.io/loftwah/buildkit/ruby`
@@ -14,7 +14,7 @@ Here’s what gets mirrored:
 
 ## Pulling the Images
 
-You’ll need Docker installed (download it from [docker.com](https://www.docker.com/) if you don’t have it). Open a terminal and use these commands to pull the `latest` versions, which are always available after the daily run:
+You'll need Docker installed (download it from [docker.com](https://www.docker.com/) if you don't have it). Open a terminal and use these commands to pull the `latest` versions, which are always available after the daily run:
 
 ```bash
 docker pull ghcr.io/loftwah/buildkit/buildkit:latest  # BuildKit
@@ -26,11 +26,11 @@ docker pull ghcr.io/loftwah/buildkit/nodejs:latest    # Node.js
 ### Specific Versions
 
 - **Daily Workflow**: Automatically mirrors `latest` tags daily. For a specific version (e.g., `ruby:3.3.0`), use the manual trigger option below.
-- **All Versions Workflow**: Pulls the latest version plus two prior stable ones when triggered manually. As of February 2025, you might see:
-  - **BuildKit**: `v0.12.5` (latest), `v0.12.0`, `v0.11.6`.
-  - **Ruby**: `3.3.0` (latest), `3.2.2`, `3.1.4`.
-  - **Nginx**: `1.25.3` (latest), `1.24.0`, `1.22.1`.
-  - **Node**: `20.11.0` (latest), `18.19.0`, `16.20.2`.
+- **All Versions Workflow**: Pulls the latest version plus two prior stable ones when triggered manually. As of March 2024, typical versions might include:
+  - **BuildKit**: `v0.13.0` (latest), `v0.12.5`, `v0.12.0`
+  - **Ruby**: `3.3.0` (latest), `3.2.3`, `3.2.2`
+  - **Nginx**: `1.25.4` (latest), `1.24.0`, `1.23.4`
+  - **Node**: `21.7.1` (latest), `20.11.1`, `18.19.1`
 
 To pull a specific version:
 
@@ -38,11 +38,11 @@ To pull a specific version:
 docker pull ghcr.io/loftwah/buildkit/ruby:3.3.0
 ```
 
-If you get a “manifest unknown” error, it hasn’t been mirrored yet—run the appropriate workflow first.
+If you get a "manifest unknown" error, it hasn't been mirrored yet—run the appropriate workflow first.
 
 ## Using the Images
 
-Here’s how to use them after pulling:
+Here's how to use them after pulling:
 
 ### BuildKit
 
@@ -108,11 +108,11 @@ node -e 'console.log("Node.js is up and running");'
 #### Manual Trigger
 
 1. Visit [https://github.com/loftwah/buildkit/actions](https://github.com/loftwah/buildkit/actions).
-2. Select “Mirror Docker Images.”
-3. Click “Run workflow.”
+2. Select "Mirror Docker Images."
+3. Click "Run workflow."
 4. **Optional**: Enter an image (e.g., `ruby:3.3.0`) to sync just that version. Leave blank to sync all `latest` tags.
 5. Keep the branch as `main`.
-6. Click “Run workflow” and wait a few minutes.
+6. Click "Run workflow" and wait a few minutes.
 
 ### All Versions Mirror (`mirror-all-images.yml`)
 
@@ -122,24 +122,24 @@ node -e 'console.log("Node.js is up and running");'
 #### Manual Trigger
 
 1. Visit [https://github.com/loftwah/buildkit/actions](https://github.com/loftwah/buildkit/actions).
-2. Select “Mirror All Docker Images.”
-3. Click “Run workflow.”
+2. Select "Mirror All Docker Images."
+3. Click "Run workflow."
 4. Leave the input box empty—no need to type anything.
 5. Keep the branch as `main`.
-6. Click “Run workflow” and wait a few minutes.
+6. Click "Run workflow" and wait a few minutes.
 
 ## What Happens If You Pull an Unmirrored Image
 
-If you try to pull an image that hasn’t been mirrored yet (e.g., `ghcr.io/loftwah/buildkit/ruby:3.3.0`):
+If you try to pull an image that hasn't been mirrored yet (e.g., `ghcr.io/loftwah/buildkit/ruby:3.3.0`):
 
 - Command: `docker pull ghcr.io/loftwah/buildkit/ruby:3.3.0`
-- Result: You’ll see “manifest unknown” or “pull access denied”—it’s not there yet.
+- Result: You'll see "manifest unknown" or "pull access denied"—it's not there yet.
 - **Solution**: Run the right workflow:
-  - For `latest`: Use “Mirror Docker Images” with no input.
-  - For specific versions: Use “Mirror Docker Images” with the tag (e.g., `ruby:3.3.0`).
-  - For latest + older versions: Use “Mirror All Docker Images.”
+  - For `latest`: Use "Mirror Docker Images" with no input.
+  - For specific versions: Use "Mirror Docker Images" with the tag (e.g., `ruby:3.3.0`).
+  - For latest + older versions: Use "Mirror All Docker Images."
 
-Check available tags at [https://github.com/loftwah/buildkit/packages](https://github.com/loftwah/buildkit/packages)—click a package to see what’s been mirrored.
+Check available tags at [https://github.com/loftwah/buildkit/packages](https://github.com/loftwah/buildkit/packages)—click a package to see what's been mirrored.
 
 ## Files in This Repository
 
@@ -163,18 +163,18 @@ Both workflows require:
 
 To enable notifications:
 
-1. Create a Slack webhook (search “Slack webhook setup” for instructions).
+1. Create a Slack webhook (search "Slack webhook setup" for instructions).
 2. Go to [https://github.com/loftwah/buildkit/settings/secrets/actions](https://github.com/loftwah/buildkit/settings/secrets/actions).
-3. Click “New repository secret.”
-4. Name it `SLACK_WEBHOOK_URL`, paste the webhook URL, and click “Add secret.”
-5. You’ll get “✅ Done” or “🚨 Failed” messages in Slack.
+3. Click "New repository secret."
+4. Name it `SLACK_WEBHOOK_URL`, paste the webhook URL, and click "Add secret."
+5. You'll get "✅ Done" or "🚨 Failed" messages in Slack.
 
-If you don’t set it up, it runs silently—no interruptions.
+If you don't set it up, it runs silently—no interruptions.
 
 ## Contributing
 
-- **Issues**: Go to the “Issues” tab and report any problems or ideas.
-- **Pull Requests**: Submit changes via the “Pull requests” tab if you’ve got improvements.
+- **Issues**: Go to the "Issues" tab and report any problems or ideas.
+- **Pull Requests**: Submit changes via the "Pull requests" tab if you've got improvements.
 
 ## Licensing
 
@@ -186,3 +186,21 @@ Visit [https://github.com/loftwah/buildkit/actions](https://github.com/loftwah/b
 
 - Green check = Workflow succeeded.
 - Red X = Something failed; click it for detailed logs.
+
+## Troubleshooting
+
+### Rate Limiting
+
+The workflows now include retry mechanisms and proper authentication to handle Docker Hub rate limits. If you still encounter issues:
+
+1. Wait a few minutes before retrying
+2. Check the workflow logs for specific error messages
+3. Verify the image and tag exist on Docker Hub
+
+### API Changes
+
+If Docker Hub's API changes cause issues:
+
+1. Check the workflow logs for API-related errors
+2. Open an issue in this repository
+3. Try the manual mirror workflow as a temporary workaround
