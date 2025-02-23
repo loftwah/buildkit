@@ -13,7 +13,7 @@ Here's what gets mirrored:
 - `moby/buildkit` → `ghcr.io/loftwah/buildkit/buildkit`
 - `ruby` → `ghcr.io/loftwah/buildkit/ruby`
 - `nginx` → `ghcr.io/loftwah/buildkit/nginx`
-- `node` → `ghcr.io/loftwah/buildkit/nodejs`
+- `node` → `ghcr.io/loftwah/buildkit/node`
 
 ## Pulling the Images
 
@@ -23,7 +23,7 @@ You'll need Docker installed (download it from [docker.com](https://www.docker.c
 docker pull ghcr.io/loftwah/buildkit/buildkit:latest  # BuildKit
 docker pull ghcr.io/loftwah/buildkit/ruby:latest      # Ruby
 docker pull ghcr.io/loftwah/buildkit/nginx:latest     # Nginx
-docker pull ghcr.io/loftwah/buildkit/nodejs:latest    # Node.js
+docker pull ghcr.io/loftwah/buildkit/node:latest      # Node.js
 ```
 
 ### Specific Versions
@@ -91,7 +91,7 @@ Open `http://localhost` in your browser to see Nginx in action.
 For JavaScript development. Start it:
 
 ```bash
-docker run -it ghcr.io/loftwah/buildkit/nodejs:latest bash
+docker run -it ghcr.io/loftwah/buildkit/node:latest bash
 ```
 
 Inside, run:
