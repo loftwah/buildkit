@@ -52,13 +52,31 @@ jobs:
           get_tags() {
             IMAGE=$1
             REPO=$2
+            echo "Attempting to get token for $REPO/$IMAGE..."
+            
             # Get token for Docker Hub API with credentials
             TOKEN=$(curl -s -u "${DOCKERHUB_USERNAME}:${DOCKERHUB_TOKEN}" \
-              "https://auth.docker.io/token?service=registry.docker.io&scope=repository:$REPO/$IMAGE:pull" | jq -r .token)
+              "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${REPO}/${IMAGE}:pull" | jq -r .token)
+            
+            if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+              echo "Failed to get token for $REPO/$IMAGE"
+              return 1
+            fi
+            
+            echo "Got token, fetching tags..."
             
             # Get tags and filter for semantic versions
-            curl -s -H "Authorization: Bearer $TOKEN" \
-              "https://registry.hub.docker.com/v2/$REPO/$IMAGE/tags/list" | \
+            TAGS=$(curl -s -H "Authorization: Bearer $TOKEN" \
+              "https://registry.hub.docker.com/v2/${REPO}/${IMAGE}/tags/list")
+            
+            if [ -z "$TAGS" ]; then
+              echo "No response from Docker Hub API"
+              return 1
+            fi
+            
+            echo "Raw tags response: $TAGS"
+            
+            echo "$TAGS" | \
               jq -r '.tags[]?' 2>/dev/null | \
               grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | \
               sed 's/^v//' | \
@@ -69,13 +87,17 @@ jobs:
           # Process each image
           for image in "buildkit:moby/buildkit" "ruby:library/ruby" "nginx:library/nginx" "node:library/node"; do
             IFS=':' read -r NAME REPO <<< "$image"
-            echo "Fetching tags for $NAME from $REPO..."
+            echo "Processing: NAME=$NAME REPO=$REPO"
             
             # Add retry mechanism with better error handling
             for i in {1..3}; do
               echo "Attempt $i to fetch tags..."
               TAGS=$(get_tags "$NAME" "$REPO")
-              if [ $? -eq 0 ] && [ ! -z "$TAGS" ]; then
+              RESULT=$?
+              echo "get_tags exit code: $RESULT"
+              echo "Retrieved tags: $TAGS"
+              
+              if [ $RESULT -eq 0 ] && [ ! -z "$TAGS" ]; then
                 echo "Successfully fetched tags"
                 break
               fi
