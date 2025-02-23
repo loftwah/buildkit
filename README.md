@@ -141,6 +141,44 @@ If you try to pull an image that hasn't been mirrored yet (e.g., `ghcr.io/loftwa
 
 Check available tags at [https://github.com/loftwah/buildkit/packages](https://github.com/loftwah/buildkit/packages)—click a package to see what's been mirrored.
 
+## Environment Setup
+
+This project requires some environment variables to be set up as GitHub Secrets. Here's how to set them up:
+
+### Required Secrets
+
+1. **Docker Hub Credentials**
+   ```bash
+   DOCKERHUB_USERNAME=your_dockerhub_username
+   DOCKERHUB_TOKEN=your_dockerhub_token  # Not your password!
+   ```
+   To get your Docker Hub token:
+   1. Log into [Docker Hub](https://hub.docker.com)
+   2. Go to Account Settings → Security
+   3. Click "New Access Token"
+   4. Name it (e.g., "GitHub Actions")
+   5. Copy the token immediately
+
+2. Add these to GitHub:
+   1. Go to your repository's Settings → Secrets and Variables → Actions
+   2. Click "New repository secret"
+   3. Add both `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`
+
+### Optional Secrets
+
+- `SLACK_WEBHOOK_URL`: For notifications (see [Slack Notifications](#slack-notifications-optional))
+
+### Local Development
+
+If you're running scripts locally:
+
+1. Copy `.env.example` to `.env`
+   ```bash
+   cp .env.example .env
+   ```
+2. Edit `.env` with your credentials
+3. Don't commit `.env` (it's in `.gitignore`)
+
 ## Files in This Repository
 
 ```
@@ -149,6 +187,7 @@ Check available tags at [https://github.com/loftwah/buildkit/packages](https://g
 │   └── workflows
 │       ├── mirror-images.yml     # Daily latest sync
 │       └── mirror-all-images.yml # Manual all versions sync
+├── .env.example                  # Template for environment variables
 └── README.md                     # This documentation
 ```
 

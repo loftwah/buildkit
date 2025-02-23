@@ -14,6 +14,12 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
 
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -32,12 +38,17 @@ jobs:
           get_tags() {
             IMAGE=$1
             REPO=$2
-            # Use v2 API with authentication to avoid rate limits
+            # Get token for Docker Hub API
             TOKEN=$(curl -s "https://auth.docker.io/token?service=registry.docker.io&scope=repository:$REPO/$IMAGE:pull" | jq -r .token)
+            
+            # Get tags and filter for semantic versions
             curl -s -H "Authorization: Bearer $TOKEN" \
               "https://registry.hub.docker.com/v2/$REPO/$IMAGE/tags/list" | \
-              jq -r '.tags[]' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | \
-              sort -Vr | head -n 3
+              jq -r '.tags[]?' 2>/dev/null | \
+              grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | \
+              sed 's/^v//' | \
+              sort -t. -k1,1nr -k2,2nr -k3,3nr | \
+              head -n 3
           }
 
           # Process each image
@@ -45,13 +56,15 @@ jobs:
             IFS=':' read -r NAME REPO <<< "$image"
             echo "Fetching tags for $NAME from $REPO..."
             
-            # Add retry mechanism
+            # Add retry mechanism with better error handling
             for i in {1..3}; do
+              echo "Attempt $i to fetch tags..."
               TAGS=$(get_tags "$NAME" "$REPO")
-              if [ ! -z "$TAGS" ]; then
+              if [ $? -eq 0 ] && [ ! -z "$TAGS" ]; then
+                echo "Successfully fetched tags"
                 break
               fi
-              echo "Attempt $i failed, retrying..."
+              echo "Attempt $i failed, waiting before retry..."
               sleep 5
             done
 
@@ -65,18 +78,30 @@ jobs:
               SOURCE="$REPO/$NAME:$TAG"
               TARGET="$GHCR_PREFIX/$NAME:$TAG"
               echo "Mirroring $SOURCE -> $TARGET"
-              docker pull "$SOURCE" || { echo "Pull failed for $SOURCE, skipping"; continue; }
-              docker tag "$SOURCE" "$TARGET"
-              docker push "$TARGET" || { echo "Push failed for $TARGET, skipping"; continue; }
+              if docker pull "$SOURCE"; then
+                docker tag "$SOURCE" "$TARGET"
+                if ! docker push "$TARGET"; then
+                  echo "Push failed for $TARGET, skipping"
+                  continue
+                fi
+              else
+                echo "Pull failed for $SOURCE, skipping"
+                continue
+              fi
             done
 
-            # Handle latest tag
+            # Handle latest tag separately
             LATEST_SOURCE="$REPO/$NAME:latest"
             LATEST_TARGET="$GHCR_PREFIX/$NAME:latest"
             echo "Mirroring latest: $LATEST_SOURCE -> $LATEST_TARGET"
-            docker pull "$LATEST_SOURCE" || { echo "Pull failed for $LATEST_SOURCE, skipping"; continue; }
-            docker tag "$LATEST_SOURCE" "$LATEST_TARGET"
-            docker push "$LATEST_TARGET" || { echo "Push failed for $LATEST_TARGET, skipping"; continue; }
+            if docker pull "$LATEST_SOURCE"; then
+              docker tag "$LATEST_SOURCE" "$LATEST_TARGET"
+              if ! docker push "$LATEST_TARGET"; then
+                echo "Push failed for $LATEST_TARGET"
+              fi
+            else
+              echo "Pull failed for $LATEST_SOURCE"
+            fi
           done
         shell: bash
 
