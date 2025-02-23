@@ -1,6 +1,7 @@
 # Docker Image Mirror
 
-![Mirror Status](https://github.com/loftwah/buildkit/actions/workflows/mirror-all-images.yml/badge.svg)
+![Daily Mirror Status](https://github.com/loftwah/buildkit/actions/workflows/mirror-images.yml/badge.svg)
+![All Versions Mirror Status](https://github.com/loftwah/buildkit/actions/workflows/mirror-all-images.yml/badge.svg)
 
 This repository (`loftwah/buildkit`) mirrors Docker images to the GitHub Container Registry (GHCR) with precision and reliability, giving you fast access to key tools. Two workflows keep everything up to date:
 
