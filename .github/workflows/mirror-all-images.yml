@@ -111,7 +111,7 @@ jobs:
               target_name=$(basename "$pull_name") # e.g., buildkit
             else
               repo_name="library/$pull_name"      # e.g., library/ruby
-              target_name="$pull_name"            # e.g., ruby
+              target_name="$pull_name"            # e.g., ruby, node (not nodejs)
             fi
             echo "Processing $pull_name (repo: $repo_name, target: $target_name)"
             

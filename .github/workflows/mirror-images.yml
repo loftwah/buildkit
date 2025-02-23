@@ -16,7 +16,7 @@ env:
     moby/buildkit:latest ghcr.io/${{ github.repository }}/buildkit
     ruby:latest ghcr.io/${{ github.repository }}/ruby
     nginx:latest ghcr.io/${{ github.repository }}/nginx
-    node:latest ghcr.io/${{ github.repository }}/nodejs
+    node:latest ghcr.io/${{ github.repository }}/node
   SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}  # Optional Slack webhook
 
 jobs:
