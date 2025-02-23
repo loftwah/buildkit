@@ -45,13 +45,16 @@ jobs:
       - name: Fetch and Mirror All Image Versions
         env:
           GHCR_PREFIX: ghcr.io/${{ github.repository }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
           # Function to get latest + 2 prior stable tags from Docker Hub
           get_tags() {
             IMAGE=$1
             REPO=$2
-            # Get token for Docker Hub API
-            TOKEN=$(curl -s "https://auth.docker.io/token?service=registry.docker.io&scope=repository:$REPO/$IMAGE:pull" | jq -r .token)
+            # Get token for Docker Hub API with credentials
+            TOKEN=$(curl -s -u "${DOCKERHUB_USERNAME}:${DOCKERHUB_TOKEN}" \
+              "https://auth.docker.io/token?service=registry.docker.io&scope=repository:$REPO/$IMAGE:pull" | jq -r .token)
             
             # Get tags and filter for semantic versions
             curl -s -H "Authorization: Bearer $TOKEN" \
