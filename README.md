@@ -2,8 +2,8 @@
 
 This repository (`loftwah/buildkit`) mirrors Docker images to the GitHub Container Registry (GHCR) with precision and reliability, giving you fast access to key tools. Two workflows keep everything up to date:
 
-- **Daily Mirror**: Syncs `latest` tags every day for `buildkit`, `ruby`, `nginx`, and `node`.
-- **Latest + Older Mirror**: Manually fetches the latest versions plus two recent stable ones with a single click.
+- **Daily Mirror**: Syncs `latest` tags every day for `buildkit`, `ruby`, `nginx`, and `node`, with an option to manually sync a specific version.
+- **All Versions Mirror**: Manually fetches the latest versions plus two recent stable ones for all four images with a single click.
 
 Here’s what gets mirrored:
 
@@ -25,8 +25,8 @@ docker pull ghcr.io/loftwah/buildkit/nodejs:latest    # Node.js
 
 ### Specific Versions
 
-- **Daily Workflow**: Automatically mirrors `latest` tags. For specific versions (e.g., `ruby:3.3.0`), use the manual trigger option.
-- **Latest + Older Workflow**: Pulls the latest version plus two prior stable ones when triggered. As of February 2025, you might see:
+- **Daily Workflow**: Automatically mirrors `latest` tags daily. For a specific version (e.g., `ruby:3.3.0`), use the manual trigger option below.
+- **All Versions Workflow**: Pulls the latest version plus two prior stable ones when triggered manually. As of February 2025, you might see:
   - **BuildKit**: `v0.12.5` (latest), `v0.12.0`, `v0.11.6`.
   - **Ruby**: `3.3.0` (latest), `3.2.2`, `3.1.4`.
   - **Nginx**: `1.25.3` (latest), `1.24.0`, `1.22.1`.
@@ -103,18 +103,18 @@ node -e 'console.log("Node.js is up and running");'
 
 - **Runs**: Automatically every day at midnight UTC (12:00 AM universal time).
 - **Purpose**: Keeps `latest` tags current for all four images.
-- **Manual Option**: Trigger it yourself for `latest` or a specific version.
+- **Manual Option**: Trigger it yourself to sync `latest` for all images or a specific version.
 
 #### Manual Trigger
 
 1. Visit [https://github.com/loftwah/buildkit/actions](https://github.com/loftwah/buildkit/actions).
 2. Select “Mirror Docker Images.”
 3. Click “Run workflow.”
-4. **Optional**: Enter an image (e.g., `ruby:3.3.0`) to sync just that version. Leave blank for all `latest`.
+4. **Optional**: Enter an image (e.g., `ruby:3.3.0`) to sync just that version. Leave blank to sync all `latest` tags.
 5. Keep the branch as `main`.
 6. Click “Run workflow” and wait a few minutes.
 
-### Latest + Older Mirror (`mirror-latest-images.yml`)
+### All Versions Mirror (`mirror-all-images.yml`)
 
 - **Runs**: Only when you trigger it manually.
 - **Purpose**: Fetches the latest version plus two prior stable ones for all four images, directly from Docker Hub.
@@ -122,7 +122,7 @@ node -e 'console.log("Node.js is up and running");'
 #### Manual Trigger
 
 1. Visit [https://github.com/loftwah/buildkit/actions](https://github.com/loftwah/buildkit/actions).
-2. Select “Mirror Latest Docker Images.”
+2. Select “Mirror All Docker Images.”
 3. Click “Run workflow.”
 4. Leave the input box empty—no need to type anything.
 5. Keep the branch as `main`.
@@ -130,13 +130,14 @@ node -e 'console.log("Node.js is up and running");'
 
 ## What Happens If You Pull an Unmirrored Image
 
-If you try to pull an image that hasn’t been mirrored yet (e.g., `ghcr.io/loftwah/buildkit/ruby:3.3.0` before running the latest workflow):
+If you try to pull an image that hasn’t been mirrored yet (e.g., `ghcr.io/loftwah/buildkit/ruby:3.3.0`):
 
 - Command: `docker pull ghcr.io/loftwah/buildkit/ruby:3.3.0`
 - Result: You’ll see “manifest unknown” or “pull access denied”—it’s not there yet.
 - **Solution**: Run the right workflow:
   - For `latest`: Use “Mirror Docker Images” with no input.
-  - For specific or recent versions: Use “Mirror Docker Images” with the tag (e.g., `ruby:3.3.0`) or “Mirror Latest Docker Images” for the latest batch.
+  - For specific versions: Use “Mirror Docker Images” with the tag (e.g., `ruby:3.3.0`).
+  - For latest + older versions: Use “Mirror All Docker Images.”
 
 Check available tags at [https://github.com/loftwah/buildkit/packages](https://github.com/loftwah/buildkit/packages)—click a package to see what’s been mirrored.
 
@@ -146,9 +147,9 @@ Check available tags at [https://github.com/loftwah/buildkit/packages](https://g
 .
 ├── .github
 │   └── workflows
-│       ├── mirror-images.yml        # Daily latest sync
-│       └── mirror-latest-images.yml # Latest + older versions sync
-└── README.md                        # This documentation
+│       ├── mirror-images.yml     # Daily latest sync
+│       └── mirror-all-images.yml # Manual all versions sync
+└── README.md                     # This documentation
 ```
 
 ## Permissions
