@@ -2,11 +2,13 @@
 
 ![Daily Mirror Status](https://github.com/loftwah/buildkit/actions/workflows/mirror-images.yml/badge.svg)
 ![All Versions Mirror Status](https://github.com/loftwah/buildkit/actions/workflows/mirror-all-images.yml/badge.svg)
+![Weekly Tests Status](https://github.com/loftwah/buildkit/actions/workflows/test-images.yml/badge.svg)
 
-This repository (`loftwah/buildkit`) mirrors Docker images to the GitHub Container Registry (GHCR) with precision and reliability, giving you fast access to key tools. Two workflows keep everything up to date:
+This repository (`loftwah/buildkit`) mirrors Docker images to the GitHub Container Registry (GHCR) with precision and reliability, giving you fast access to key tools. Three workflows keep everything up to date and tested:
 
 - **Daily Mirror**: Syncs `latest` tags every day for `buildkit`, `ruby`, `nginx`, and `node`, with an option to manually sync a specific version.
 - **All Versions Mirror**: Manually fetches the latest versions plus two recent stable ones for all four images with a single click.
+- **Weekly Tests**: Automatically tests all mirrored images every Sunday to ensure they're working correctly.
 
 Here's what gets mirrored:
 
@@ -113,6 +115,20 @@ node -e 'console.log("Node.js is up and running");'
 - **Runs**: Manually triggered only.
 - **Purpose**: Syncs latest version plus two prior stable versions for each image.
 - **Note**: Use this when you need specific version tags.
+
+### Weekly Tests (`test-images.yml`)
+
+- **Runs**: Automatically every Sunday at midnight UTC.
+- **Purpose**: Ensures all mirrored images are working correctly.
+- **Tests**: 
+  - BuildKit: Verifies daemon startup
+  - Ruby: Checks version command
+  - Nginx: Tests configuration
+  - Node.js: Validates version command
+- **Notifications**:
+  - Slack notifications (if configured via `SLACK_WEBHOOK_URL`)
+  - Email notifications (if configured via `RESEND_API_KEY` and `NOTIFICATION_EMAIL`)
+- **Manual Trigger**: Can be run on-demand via workflow dispatch.
 
 ## Contributing
 

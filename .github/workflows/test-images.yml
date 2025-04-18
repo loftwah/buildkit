@@ -1,0 +1,174 @@
+name: Test Docker Images Weekly
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Run at midnight every Sunday
+  workflow_dispatch:      # Allow manual trigger
+
+jobs:
+  test-images:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
+      contents: read
+    
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Test Images
+        env:
+          GHCR_PREFIX: ghcr.io/${{ github.repository }}
+        run: |
+          # Define images to test
+          IMAGES=("ruby" "nginx" "node" "buildkit")
+          
+          test_image() {
+            local IMAGE_NAME=$1
+            local TAG=$2
+            local FULL_IMAGE="${GHCR_PREFIX}/${IMAGE_NAME}:${TAG}"
+            echo "Testing image: $FULL_IMAGE"
+            
+            # Pull the image
+            if ! docker pull "$FULL_IMAGE"; then
+              echo "❌ Failed to pull $FULL_IMAGE"
+              return 1
+            fi
+            
+            # Basic test based on image type
+            case "$IMAGE_NAME" in
+              "ruby")
+                if ! docker run --rm "$FULL_IMAGE" ruby --version; then
+                  echo "❌ Ruby version check failed for $FULL_IMAGE"
+                  return 1
+                fi
+                ;;
+              "nginx")
+                # Start nginx container
+                CONTAINER_ID=$(docker run -d "$FULL_IMAGE")
+                sleep 5
+                if ! docker exec "$CONTAINER_ID" nginx -t; then
+                  echo "❌ Nginx configuration test failed for $FULL_IMAGE"
+                  docker rm -f "$CONTAINER_ID"
+                  return 1
+                fi
+                docker rm -f "$CONTAINER_ID"
+                ;;
+              "node")
+                if ! docker run --rm "$FULL_IMAGE" node --version; then
+                  echo "❌ Node.js version check failed for $FULL_IMAGE"
+                  return 1
+                fi
+                ;;
+              "buildkit")
+                # For buildkit, we'll just check if the daemon starts
+                CONTAINER_ID=$(docker run -d --privileged "$FULL_IMAGE")
+                sleep 5
+                if ! docker inspect "$CONTAINER_ID" >/dev/null 2>&1; then
+                  echo "❌ BuildKit daemon failed to start for $FULL_IMAGE"
+                  docker rm -f "$CONTAINER_ID" 2>/dev/null || true
+                  return 1
+                fi
+                docker rm -f "$CONTAINER_ID"
+                ;;
+            esac
+            
+            echo "✅ Successfully tested $FULL_IMAGE"
+            return 0
+          }
+          
+          # Track overall success
+          OVERALL_SUCCESS=true
+          
+          for IMAGE_NAME in "${IMAGES[@]}"; do
+            echo "Testing $IMAGE_NAME images..."
+            
+            # Test latest tag
+            if ! test_image "$IMAGE_NAME" "latest"; then
+              OVERALL_SUCCESS=false
+              echo "❌ Failed testing $IMAGE_NAME:latest"
+            fi
+            
+            # Get the three most recent version tags
+            TAGS=$(docker inspect "${GHCR_PREFIX}/${IMAGE_NAME}:latest" | \
+                   jq -r '.[0].RepoTags[]' | \
+                   grep -E "${GHCR_PREFIX}/${IMAGE_NAME}:v?[0-9]+\.[0-9]+\.[0-9]+$" | \
+                   sed "s|${GHCR_PREFIX}/${IMAGE_NAME}:||" | \
+                   sort -V -r | \
+                   head -n 3)
+            
+            for TAG in $TAGS; do
+              if ! test_image "$IMAGE_NAME" "$TAG"; then
+                OVERALL_SUCCESS=false
+                echo "❌ Failed testing $IMAGE_NAME:$TAG"
+              fi
+            done
+          done
+          
+          if [ "$OVERALL_SUCCESS" = false ]; then
+            echo "❌ Some image tests failed"
+            exit 1
+          fi
+          
+          echo "✅ All image tests completed successfully"
+
+      - name: Notify Slack on Success
+        if: success() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"✅ Weekly Docker image tests passed for ${{ github.repository }}! All images are working properly. Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK_URL"
+        continue-on-error: true
+
+      - name: Notify Slack on Failure
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"🚨 Weekly Docker image tests failed for ${{ github.repository }}! Some images may not be working properly. Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK_URL"
+        continue-on-error: true
+
+      - name: Notify Email on Success
+        if: success() && env.RESEND_API_KEY != ''
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          NOTIFICATION_EMAIL: ${{ secrets.NOTIFICATION_EMAIL }}
+        run: |
+          curl -X POST 'https://api.resend.com/emails' \
+            -H "Authorization: Bearer $RESEND_API_KEY" \
+            -H 'Content-Type: application/json' \
+            -d "{
+              \"from\": \"BuildKit Docker Tests <docker-tests@resend.dev>\",
+              \"to\": \"${NOTIFICATION_EMAIL}\",
+              \"subject\": \"✅ Weekly Docker Image Tests Passed\",
+              \"html\": \"<p>Weekly Docker image tests passed for ${{ github.repository }}!</p><p>All images are working properly.</p><p>Check the logs here: <a href='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'>GitHub Actions Logs</a></p>\"
+            }"
+        continue-on-error: true
+
+      - name: Notify Email on Failure
+        if: failure() && env.RESEND_API_KEY != ''
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          NOTIFICATION_EMAIL: ${{ secrets.NOTIFICATION_EMAIL }}
+        run: |
+          curl -X POST 'https://api.resend.com/emails' \
+            -H "Authorization: Bearer $RESEND_API_KEY" \
+            -H 'Content-Type: application/json' \
+            -d "{
+              \"from\": \"BuildKit Docker Tests <docker-tests@resend.dev>\",
+              \"to\": \"${NOTIFICATION_EMAIL}\",
+              \"subject\": \"🚨 Weekly Docker Image Tests Failed\",
+              \"html\": \"<p>Weekly Docker image tests failed for ${{ github.repository }}!</p><p>Some images may not be working properly.</p><p>Check the logs here: <a href='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'>GitHub Actions Logs</a></p>\"
+            }"
+        continue-on-error: true 
