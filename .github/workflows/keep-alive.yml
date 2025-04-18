@@ -1,0 +1,25 @@
+name: Keep Branch Alive
+
+on:
+  schedule:
+    # Runs every 2 days at 00:00 UTC
+    - cron: '0 0 */2 * *'
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Configure Git
+        run: |
+          git config --global user.name "Dean Lofts"
+          git config --global user.email "dean@deanlofts.xyz"
+          
+      - name: Create empty commit
+        run: |
+          git commit --allow-empty -m "chore: keep branch alive"
+          git push 
